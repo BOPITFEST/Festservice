@@ -192,6 +192,45 @@ app.post('/api/engineers/accept', async (req, res) => {
   }
 });
 
+  // --- PRODUCT MASTER ROUTES (NO LOGIC CHANGE TO EXISTING CODE) ---
+
+  // Get Brands from view
+  app.get('/api/products/brands', async (req, res) => {
+    try {
+      const db = await getPool();
+      const [rows] = await db.execute(`
+        SELECT DISTINCT brand 
+        FROM FE_react_list_product
+        ORDER BY brand
+      `);
+
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ error: 'Database error', details: err.message });
+    }
+  });
+
+
+  // Get Families based on Brand
+  app.get('/api/products/families/:brand', async (req, res) => {
+    const { brand } = req.params;
+
+    try {
+      const db = await getPool();
+      const [rows] = await db.execute(`
+        SELECT DISTINCT family 
+        FROM FE_react_list_product
+        WHERE brand = ?
+        ORDER BY family
+      `, [brand]);
+
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ error: 'Database error', details: err.message });
+    }
+  });
+
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
