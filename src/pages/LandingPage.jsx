@@ -8,11 +8,15 @@ const LandingPage = () => {
   const [submitted, setSubmitted] = useState(false);
   const [brands, setBrands] = useState([]);
   const [families, setFamilies] = useState([]);
+  const [models, setModels] = useState([]);
   const [errorCodes, setErrorCodes] = useState([]);
-  
+
   const [formData, setFormData] = useState({
     customerName: '',
     email: '',
+    phone: '', // Added
+    state: '', // Added
+    pincode: '', // Added
     brand: '',
     family: '',
     modelNumber: '',
@@ -22,15 +26,22 @@ const LandingPage = () => {
     issue: ''
   });
 
+  const INDIAN_STATES = [
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
+    "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
+    "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+    "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi"
+  ];
+
   useEffect(() => {
-  fetch('http://localhost:3001/api/products/brands')
-    .then(res => res.json())
-    .then(data => {
-      if (Array.isArray(data)) setBrands(data);
-      else setBrands([]);
-    })
-    .catch(err => console.error(err));
-}, []);
+    fetch('http://localhost:3001/api/products/brands')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setBrands(data);
+        else setBrands([]);
+      })
+      .catch(err => console.error(err));
+  }, []);
 
   const fetchErrorCodes = async () => {
     try {
@@ -59,25 +70,42 @@ const LandingPage = () => {
   //   setFormData({ ...formData, [name]: value });
   // };
 
-    const handleChange = (e) => {
-      const { name, value } = e.target;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
 
-      if (name === 'brand') {
-        setFormData({ ...formData, brand: value, family: '' });
-
+    if (name === 'brand') {
+      setFamilies([]);
+      setModels([]);
+      setFormData({ ...formData, brand: value, family: '', modelNumber: '' });
+      if (value) {
         fetch(`http://localhost:3001/api/products/families/${value}`)
           .then(res => res.json())
           .then(data => setFamilies(data));
-
-        return;
       }
+      return;
+    }
 
-      if (name === 'serialNumber') {
-        if (!/^\d{0,10}$/.test(value)) return;
+    if (name === 'family') {
+      setModels([]);
+      setFormData({ ...formData, family: value, modelNumber: '' });
+      if (value) {
+        fetch(`http://localhost:3001/api/products/models/${formData.brand}/${value}`)
+          .then(res => res.json())
+          .then(data => setModels(data));
       }
+      return;
+    }
 
-      setFormData({ ...formData, [name]: value });
-    };
+    if (name === 'serialNumber') {
+      if (!/^\d{0,10}$/.test(value)) return;
+    }
+
+    if (name === 'pincode') {
+      if (!/^\d{0,6}$/.test(value)) return;
+    }
+
+    setFormData({ ...formData, [name]: value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,51 +115,75 @@ const LandingPage = () => {
 
   /* SUCCESS SCREEN  */
 
+  // Handle auto-close/redirect after submission
+  useEffect(() => {
+    let timer;
+    if (submitted) {
+      timer = setTimeout(() => {
+        handleResetForm();
+      }, 10000); // Redirect after 10 seconds
+    }
+    return () => clearTimeout(timer);
+  }, [submitted]);
+
+  const handleResetForm = () => {
+    setSubmitted(false);
+    setFormData({
+      customerName: '',
+      email: '',
+      phone: '',
+      state: '',
+      city: '',
+      brand: '',
+      family: '',
+      modelNumber: '',
+      serialNumber: '',
+      purchaseDate: '',
+      errorCode: '',
+      issue: ''
+    });
+  };
+
+  /* SUCCESS SCREEN  */
+
   if (submitted) {
     return (
-      <div className="container" style={{ padding: '4rem 1.5rem' }}>
-        <div className="card fade-in" style={{ maxWidth: '520px', margin: '0 auto', textAlign: 'center', padding: '3rem' }}>
+      <div className="container" style={{ padding: '4rem 1.5rem', minHeight: '80vh', display: 'flex', alignItems: 'center' }}>
+        <div className="card fade-in" style={{ maxWidth: '520px', margin: '0 auto', textAlign: 'center', padding: '3.5rem 2.5rem', boxShadow: 'var(--shadow-xl)' }}>
           <div style={{
-            width: '64px',
-            height: '64px',
+            width: '80px',
+            height: '80px',
             background: '#d1fae5',
-            borderRadius: '50%',
+            borderRadius: '24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 1.5rem'
+            margin: '0 auto 2rem',
+            transform: 'rotate(-10deg)'
           }}>
-            <CheckCircle size={32} color="#065f46" />
+            <CheckCircle size={40} color="#059669" />
           </div>
 
-          <h2 style={{ fontSize: '1.9rem', fontWeight: 700 }}>
-            Complaint Registered Successfully
+          <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#111827', marginBottom: '1rem', letterSpacing: '-0.02em' }}>
+            Mission Accomplished!
           </h2>
 
-          <p style={{ color: 'var(--gray-600)', marginTop: '1rem' }}>
-            Your request has been logged. Our service team will review and assign an engineer shortly.
+          <p style={{ color: 'var(--gray-500)', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2.5rem' }}>
+            Your complaint has been synchronized with our database. A technical task has been generated for our engineering fleet.
           </p>
 
-          <button
-            onClick={() => {
-              setSubmitted(false);
-              setFormData({
-                customerName: '',
-                email: '',
-                brand: '',
-                family: '',
-                modelNumber: '',
-                serialNumber: '',
-                purchaseDate: '',
-                errorCode: '',
-                issue: ''
-              });
-            }}
-            className="btn btn-primary"
-            style={{ marginTop: '2rem' }}
-          >
-            Submit Another Complaint
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <button
+              onClick={handleResetForm}
+              className="btn btn-primary"
+              style={{ height: '56px', fontSize: '1.1rem', width: '100%', borderRadius: '14px' }}
+            >
+              Return to Flight Deck
+            </button>
+            <p style={{ fontSize: '0.85rem', color: 'var(--gray-400)' }}>
+              Auto-returning in 10 seconds...
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -140,39 +192,25 @@ const LandingPage = () => {
   /*  MAIN FORM */
 
   return (
-    <div className="container" style={{ padding: '3rem 1.5rem' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <div className="container" style={{ padding: '2rem 1rem' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
 
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{
-            width: '58px',
-            height: '58px',
-            background: 'var(--primary)',
-            borderRadius: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 1rem'
-          }}>
-            <Package size={28} color="white" />
-          </div>
-
-          <h1 style={{ fontSize: '2.4rem', fontWeight: 800 }}>
-            Product Complaint Registration
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h1 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '0.25rem', letterSpacing: '-2px' }}>
+            <span style={{ color: '#0f172a' }}>Fest</span>
+            <span style={{ color: '#2563eb' }}>Service</span>
           </h1>
-
-          <p style={{ fontSize: '1.05rem', color: 'var(--gray-600)' }}>
-            Please provide the required details to help us resolve your issue quickly and efficiently.
+          <p style={{ color: '#64748b', fontSize: '1.1rem', fontWeight: 600 }}>
+            Customer Complaint Portal
           </p>
         </div>
 
-        <div className="card fade-in">
+        <div className="card fade-in" style={{ padding: '1.5rem 2rem' }}>
           <form onSubmit={handleSubmit}>
 
             {/* CUSTOMER DETAILS */}
             <h3 className="section-title">
-              <Layers size={18} /> Customer Information
+              Customer Information
             </h3>
 
             <div className="grid grid-cols-2">
@@ -201,15 +239,57 @@ const LandingPage = () => {
               </div>
             </div>
 
+            <div className="grid grid-cols-3">
+              <div className="form-group">
+                <label className="form-label">Phone Number</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  className="form-input"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                  placeholder="+91..."
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">State</label>
+                <select
+                  name="state"
+                  className="form-select"
+                  value={formData.state}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select State</option>
+                  {INDIAN_STATES.map(st => (
+                    <option key={st} value={st}>{st}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Pincode (6-digit)</label>
+                <input
+                  type="text"
+                  name="pincode"
+                  className="form-input"
+                  value={formData.pincode}
+                  onChange={handleChange}
+                  required
+                  placeholder="682001"
+                />
+              </div>
+            </div>
+
             {/* PRODUCT SECTION */}
             <h3 className="section-title">
-              <Package size={18} /> Product Details
+              Product Details
             </h3>
 
             <div className="grid grid-cols-2">
               <div className="form-group">
                 <label className="form-label">Brand</label>
-                <select name="brand" className="form-input" value={formData.brand} onChange={handleChange} required>
+                <select name="brand" className="form-select" value={formData.brand} onChange={handleChange} required>
                   <option value="">Select Brand</option>
                   {brands.map((b, i) => (
                     <option key={i} value={b.brand}>{b.brand}</option>
@@ -218,7 +298,7 @@ const LandingPage = () => {
               </div>
               <div className="form-group">
                 <label className="form-label">Product Family</label>
-                <select name="family" className="form-input" value={formData.family} onChange={handleChange} required>
+                <select name="family" className="form-select" value={formData.family} onChange={handleChange} required disabled={!formData.brand}>
                   <option value="">Select Family</option>
                   {families.map((f, i) => (
                     <option key={i} value={f.family}>{f.family}</option>
@@ -228,14 +308,13 @@ const LandingPage = () => {
             </div>
             <div className="grid grid-cols-2">
               <div className="form-group">
-                <label className="form-label">Model Number</label>
-                <input
-                  type="text"
-                  name="modelNumber"
-                  className="form-input"
-                  value={formData.modelNumber}
-                  onChange={handleChange}
-                />
+                <label className="form-label">Model Number (MN)</label>
+                <select name="modelNumber" className="form-select" value={formData.modelNumber} onChange={handleChange} required disabled={!formData.family}>
+                  <option value="">Select Model Number</option>
+                  {models.map((m, i) => (
+                    <option key={i} value={m.mn}>{m.mn}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">
@@ -266,7 +345,7 @@ const LandingPage = () => {
 
               <div className="form-group">
                 <label className="form-label">Error Code</label>
-                <select name="errorCode" className="form-input" value={formData.errorCode} onChange={handleChange}>
+                <select name="errorCode" className="form-select" value={formData.errorCode} onChange={handleChange}>
                   <option value="">Select Error</option>
                   {errorCodes.map(err => (
                     <option key={err.code} value={err.code}>{err.code}</option>
@@ -290,7 +369,7 @@ const LandingPage = () => {
               />
             </div>
 
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '56px', fontSize: '1.1rem', marginTop: '1rem' }}>
               Register Complaint
             </button>
 

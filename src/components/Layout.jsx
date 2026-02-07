@@ -35,34 +35,41 @@ const Layout = ({ children }) => {
             display: 'flex',
             alignItems: 'center',
             textDecoration: 'none',
-            color: 'var(--gray-900)',
+            fontSize: '1.75rem',
             fontWeight: 800,
-            fontSize: '1.5rem',
-            letterSpacing: '-0.025em'
+            letterSpacing: '-1.5px'
           }}>
-            <span style={{ color: 'var(--gray-900)' }}>FEST</span>
-            <span style={{ color: 'var(--primary)' }}>Service</span>
+            <span style={{ color: '#0f172a' }}>Fest</span>
+            <span style={{ color: '#2563eb' }}>Service</span>
           </Link>
 
           {/* Desktop Nav */}
           <nav style={{ display: 'none' }} className="desktop-nav">
             {!user ? (
               <div style={{ display: 'flex', gap: '1rem' }}>
-                <Link to="/admin/login" className="btn btn-secondary">Admin Access</Link>
-                <Link to="/engineer/login" className="btn btn-primary">Engineer Portal</Link>
+                <Link to="/login" className="btn btn-primary" style={{ borderRadius: '8px' }}>Staff Login</Link>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                 <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', fontWeight: 600, textTransform: 'uppercase' }}>
-                    {user.role}
-                    </span>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--gray-900)' }}>
-                    ID: {user.trigram}
-                    </span>
+                  <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {user.role} AUTHORIZATION
+                  </span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
+                    {user.trigram || user.name}
+                  </span>
                 </div>
-                <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.5rem 1rem' }}>
-                  <LogOut size={16} />
+                <div style={{ width: '2px', height: '32px', background: '#f1f5f9' }}></div>
+                <button onClick={handleLogout} className="btn" style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  color: '#ef4444',
+                  fontWeight: 700,
+                  background: 'none',
+                  padding: '0.5rem'
+                }}>
+                  <LogOut size={20} />
                   Sign Out
                 </button>
               </div>
@@ -94,11 +101,8 @@ const Layout = ({ children }) => {
           }} className="mobile-menu">
             {!user ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <Link to="/admin/login" className="btn btn-secondary" onClick={() => setMobileMenuOpen(false)}>
-                  Admin Access
-                </Link>
-                <Link to="/engineer/login" className="btn btn-primary" onClick={() => setMobileMenuOpen(false)}>
-                  Engineer Portal
+                <Link to="/login" className="btn btn-primary" onClick={() => setMobileMenuOpen(false)}>
+                  Staff Login
                 </Link>
               </div>
             ) : (

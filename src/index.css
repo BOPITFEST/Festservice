@@ -14,7 +14,7 @@
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
-  
+
   --gray-50: #f9fafb;
   --gray-100: #f3f4f6;
   --gray-200: #e5e7eb;
@@ -25,7 +25,7 @@
   --gray-700: #374151;
   --gray-800: #1f2937;
   --gray-900: #111827;
-  
+
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -118,12 +118,25 @@ body {
 .form-select,
 .form-textarea {
   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--gray-300);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
+  padding: 0.875rem 1.25rem;
+  border: 2px solid var(--gray-200);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
+  background: white;
+  color: var(--gray-800);
+}
+
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.25rem;
+  padding-right: 3rem;
+  cursor: pointer;
 }
 
 .form-input:focus,
@@ -131,12 +144,23 @@ body {
 .form-textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+  background: white;
+}
+
+.form-input:hover:not(:focus),
+.form-select:hover:not(:focus),
+.form-textarea:hover:not(:focus) {
+  border-color: var(--gray-300);
+}
+
+.form-input::placeholder {
+  color: var(--gray-400);
 }
 
 .form-textarea {
   resize: vertical;
-  min-height: 100px;
+  min-height: 120px;
 }
 
 /* Badge */
@@ -208,10 +232,59 @@ body {
 }
 
 @media (max-width: 768px) {
+
   .grid-cols-2,
   .grid-cols-3 {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
+
+  .container {
+    padding: 0 1rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+    border-radius: 8px;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-input,
+  .form-select,
+  .form-textarea {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  h1 {
+    font-size: 2.5rem !important;
+  }
+
+  p {
+    font-size: 1rem !important;
+  }
+}
+
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 1.5rem;
+  margin-top: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--gray-100);
+  padding-bottom: 0.5rem;
+}
+
+.section-title:first-of-type {
+  margin-top: 0;
 }
 
 /* Animations */
@@ -220,6 +293,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -228,4 +302,58 @@ body {
 
 .fade-in {
   animation: fadeIn 0.3s ease-out;
+}
+
+/* Numeric Status Badges */
+.badge-0 {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Pending */
+.badge-5 {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* Assigned */
+.badge-10,
+.badge-11,
+.badge-15 {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* In Progress / Contacted */
+.badge-20,
+.badge-25,
+.badge-30,
+.badge-35,
+.badge-40,
+.badge-45 {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+/* Specialized States */
+.badge-50,
+.badge-20 {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* Completed */
+.badge-Completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-Pending {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-Active {
+  background: #d1fae5;
+  color: #065f46;
 }

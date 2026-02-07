@@ -13,43 +13,53 @@ const PORT = process.env.PORT || 3001;
 let pool;
 
 async function getPool() {
-    if (!pool) {
-        try {
-            const connectionUrl = new URL(process.env.DATABASE_URL);
-            pool = mysql.createPool({
-                host: connectionUrl.hostname,
-                port: connectionUrl.port,
-                user: connectionUrl.username,
-                password: connectionUrl.password,
-                database: connectionUrl.pathname.substring(1),
-                ssl: {
-                    rejectUnauthorized: false
-                },
-                waitForConnections: true,
-                connectionLimit: 10,
-                queueLimit: 0,
-                enableKeepAlive: true,
-                keepAliveInitialDelay: 0
-            });
-            console.log('Database Pool Connected');
-        } catch (error) {
-            console.error('Database connection failed:', error.message);
-            throw error;
-        }
+  if (!pool) {
+    try {
+      const connectionUrl = new URL(process.env.DATABASE_URL);
+      pool = mysql.createPool({
+        host: connectionUrl.hostname,
+        port: connectionUrl.port,
+        user: connectionUrl.username,
+        password: connectionUrl.password,
+        database: connectionUrl.pathname.substring(1),
+        ssl: {
+          rejectUnauthorized: false
+        },
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0
+      });
+      console.log('Database Pool Connected');
+    } catch (error) {
+      console.error('Database connection failed:', error.message);
+      throw error;
     }
-    return pool;
+  }
+  return pool;
 }
 
 // --- AUTH ROUTES ---
 
-// Admin Login (using Trigram)
-app.post('/api/auth/admin/login', async (req, res) => {
+// Unified Login Route
+app.post('/api/auth/login', async (req, res) => {
   const { trigram, password } = req.body;
   try {
     const db = await getPool();
-    const [rows] = await db.execute('SELECT * FROM wp_admins WHERE trigram = ? AND password = ?', [trigram, password]);
+    const [rows] = await db.execute('SELECT * FROM users WHERE trigram = ? AND password = ?', [trigram, password]);
     if (rows.length > 0) {
-      res.json({ success: true, user: { id: rows[0].id, trigram: rows[0].trigram, role: 'admin' } });
+      const user = rows[0];
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          trigram: user.trigram,
+          name: user.name,
+          role: user.role,
+          role_id: user.role_id
+        }
+      });
     } else {
       res.status(401).json({ success: false, message: 'Invalid Trigram or Password' });
     }
@@ -58,14 +68,30 @@ app.post('/api/auth/admin/login', async (req, res) => {
   }
 });
 
-// Engineer Login (using Trigram)
+// Admin Login (Legacy - keeping for compatibility during migration if needed)
+app.post('/api/auth/admin/login', async (req, res) => {
+  const { trigram, password } = req.body;
+  try {
+    const db = await getPool();
+    const [rows] = await db.execute('SELECT * FROM users WHERE trigram = ? AND password = ? AND role_id = 10', [trigram, password]);
+    if (rows.length > 0) {
+      res.json({ success: true, user: { id: rows[0].id, trigram: rows[0].trigram, role: 'admin', role_id: 10 } });
+    } else {
+      res.status(401).json({ success: false, message: 'Invalid Trigram or Password' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Engineer Login (Legacy)
 app.post('/api/auth/engineer/login', async (req, res) => {
   const { trigram, password } = req.body;
   try {
     const db = await getPool();
-    const [rows] = await db.execute('SELECT * FROM wp_engineers WHERE trigram = ? AND password = ?', [trigram, password]);
+    const [rows] = await db.execute('SELECT * FROM users WHERE trigram = ? AND password = ? AND role_id = 5', [trigram, password]);
     if (rows.length > 0) {
-      res.json({ success: true, user: { id: rows[0].id, trigram: rows[0].trigram, name: rows[0].name, role: 'engineer' } });
+      res.json({ success: true, user: { id: rows[0].id, trigram: rows[0].trigram, name: rows[0].name, role: 'engineer', role_id: 5 } });
     } else {
       res.status(401).json({ success: false, message: 'Invalid Trigram or Password' });
     }
@@ -78,16 +104,43 @@ app.post('/api/auth/engineer/login', async (req, res) => {
 
 // Create Ticket (Public)
 app.post('/api/tickets', async (req, res) => {
-  const { customerName, email, serialNumber, purchaseDate, issue } = req.body;
+  const { customerName, email, phone, state, pincode, serialNumber, purchaseDate, issue, brand, family, modelNumber, errorCode } = req.body;
   try {
     const db = await getPool();
+    // Use fallback for optional fields if not present in older clients
     const [result] = await db.execute(
-      'INSERT INTO wp_tickets (customerName, email, serialNumber, purchaseDate, issue, status) VALUES (?, ?, ?, ?, ?, ?)',
-      [customerName, email, serialNumber, purchaseDate, issue, 'Pending']
+      'INSERT INTO complaints (customerName, email, phone, state, pincode, serialNumber, purchaseDate, issue, brand, family, modelNumber, errorCode, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        customerName,
+        email,
+        phone || '',
+        state || '',
+        pincode || '',
+        serialNumber,
+        purchaseDate,
+        issue,
+        brand || '',
+        family || '',
+        modelNumber || '',
+        errorCode || '',
+        '0'
+      ] // Status 0 = Creation
     );
-    res.status(201).json({ id: result.insertId, status: 'Pending' });
+    res.status(201).json({ id: result.insertId, status: '0' });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get States (For Filter)
+app.get('/api/tickets/states', async (req, res) => {
+  try {
+    const db = await getPool();
+    const [rows] = await db.execute('SELECT DISTINCT state FROM complaints WHERE state IS NOT NULL AND state != "" ORDER BY state');
+    res.json(rows.map(r => r.state));
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
   }
 });
 
@@ -95,7 +148,7 @@ app.post('/api/tickets', async (req, res) => {
 app.get('/api/tickets', async (req, res) => {
   try {
     const db = await getPool();
-    const [tickets] = await db.execute('SELECT * FROM wp_tickets ORDER BY createdAt DESC');
+    const [tickets] = await db.execute('SELECT *, createdAt as createdAt FROM complaints ORDER BY createdAt DESC');
     res.json(tickets);
   } catch (err) {
     res.status(500).json({ error: 'Database error' });
@@ -108,30 +161,76 @@ app.put('/api/tickets/:id/assign', async (req, res) => {
   const { assignedTo } = req.body;
   try {
     const db = await getPool();
+
+    // Get current status and engineer details for logging
+    const [currentTicket] = await db.execute('SELECT status FROM complaints WHERE id = ?', [id]);
+    const previousStatus = currentTicket[0] ? currentTicket[0].status : 'Unknown';
+
     await db.execute(
-      'UPDATE wp_tickets SET assignedTo = ?, status = ? WHERE id = ?',
-      [assignedTo, 'Assigned', id]
+      'UPDATE complaints SET assignedTo = ?, status = ? WHERE id = ?',
+      [assignedTo, '5', id]
     );
-    res.json({ message: 'Ticket assigned' });
+
+    // Log to history
+    await db.execute(
+      'INSERT INTO complaint_status_logs (complaint_id, previous_status, new_status, remarks, updated_by) VALUES (?, ?, ?, ?, ?)',
+      [id, previousStatus, '5', 'Assigned to Engineer', 'Admin']
+    );
+
+    res.json({ message: 'Ticket assigned', status: '5' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Update Ticket Status & Remarks (Engineer)
+app.put('/api/tickets/:id/update', async (req, res) => {
+  const { id } = req.params;
+  const { status, remarks, updatedBy } = req.body; // updatedBy should be sent from frontend (Trigram)
+  try {
+    const db = await getPool();
+
+    // Get previous status
+    const [currentTicket] = await db.execute('SELECT status FROM complaints WHERE id = ?', [id]);
+    const previousStatus = currentTicket[0] ? currentTicket[0].status : 'Unknown';
+
+    // Use provided remarks or default to 'Status updated'
+    const finalRemarks = remarks && remarks.trim() !== '' ? remarks : 'Status updated';
+
+    await db.execute(
+      'UPDATE complaints SET status = ?, remarks = ? WHERE id = ?',
+      [status, finalRemarks, id]
+    );
+
+    // Log to history
+    await db.execute(
+      'INSERT INTO complaint_status_logs (complaint_id, previous_status, new_status, remarks, updated_by) VALUES (?, ?, ?, ?, ?)',
+      [id, previousStatus, status, finalRemarks, updatedBy || 'Engineer']
+    );
+
+    res.json({ message: 'Ticket updated', status, remarks: finalRemarks });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get Ticket History
+app.get('/api/tickets/:id/history', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const db = await getPool();
+    const [history] = await db.execute(
+      'SELECT *, updated_at as updated_at FROM complaint_status_logs WHERE complaint_id = ? ORDER BY updated_at DESC',
+      [id]
+    );
+    res.json(history);
   } catch (err) {
     res.status(500).json({ error: 'Database error' });
   }
 });
 
-// Complete Ticket (Engineer)
-app.put('/api/tickets/:id/complete', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const db = await getPool();
-    await db.execute(
-      'UPDATE wp_tickets SET status = ? WHERE id = ?',
-      ['Completed', id]
-    );
-    res.json({ message: 'Ticket completed' });
-  } catch (err) {
-    res.status(500).json({ error: 'Database error' });
-  }
-});
 
 // Change Password (Engineer)
 app.put('/api/auth/engineer/change-password', async (req, res) => {
@@ -139,7 +238,7 @@ app.put('/api/auth/engineer/change-password', async (req, res) => {
   try {
     const db = await getPool();
     await db.execute(
-      'UPDATE wp_engineers SET password = ? WHERE trigram = ?',
+      'UPDATE users SET password = ? WHERE trigram = ?',
       [newPassword, trigram]
     );
     res.json({ success: true, message: 'Password updated successfully' });
@@ -151,27 +250,30 @@ app.put('/api/auth/engineer/change-password', async (req, res) => {
 
 // --- ENGINEER ROUTES ---
 
-// Get All Engineers
+// Get All Staff (Admins and Engineers)
 app.get('/api/engineers', async (req, res) => {
   try {
     const db = await getPool();
-    const [engineers] = await db.execute('SELECT id, trigram, name, email, status, createdAt FROM wp_engineers');
-    res.json(engineers);
+    const [staff] = await db.execute('SELECT id, trigram, name, email, status, role, role_id, created_at as createdAt FROM users');
+    res.json(staff);
   } catch (err) {
     res.status(500).json({ error: 'Database error' });
   }
 });
 
-// Add Engineer (Admin)
+// Add Staff Member (Admin)
 app.post('/api/engineers', async (req, res) => {
-  const { name, email, trigram, password } = req.body;
+  const { name, email, trigram, password, role } = req.body;
+  const roleId = role === 'admin' ? 10 : 5;
+  const finalRole = role === 'admin' ? 'admin' : 'engineer';
+
   try {
     const db = await getPool();
     const [result] = await db.execute(
-      'INSERT INTO wp_engineers (name, email, trigram, password, status) VALUES (?, ?, ?, ?, ?)',
-      [name, email || '', trigram, password || 'password123', 'Pending']
+      'INSERT INTO users (name, email, trigram, password, status, role, role_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name, email || '', trigram, password || 'password123', 'Pending', finalRole, roleId]
     );
-    res.status(201).json({ id: result.insertId, name, trigram, status: 'Pending' });
+    res.status(201).json({ id: result.insertId, name, trigram, status: 'Pending', role: finalRole, role_id: roleId });
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });
   }
@@ -183,7 +285,7 @@ app.post('/api/engineers/accept', async (req, res) => {
   try {
     const db = await getPool();
     await db.execute(
-      'UPDATE wp_engineers SET status = ? WHERE trigram = ?',
+      'UPDATE users SET status = ? WHERE trigram = ?',
       ['Active', trigram]
     );
     res.json({ message: 'Invitation accepted' });
@@ -192,43 +294,58 @@ app.post('/api/engineers/accept', async (req, res) => {
   }
 });
 
-  // --- PRODUCT MASTER ROUTES (NO LOGIC CHANGE TO EXISTING CODE) ---
+// --- PRODUCT MASTER ROUTES (NO LOGIC CHANGE TO EXISTING CODE) ---
 
-  // Get Brands from view
-  app.get('/api/products/brands', async (req, res) => {
-    try {
-      const db = await getPool();
-      const [rows] = await db.execute(`
+// Get Brands from view
+app.get('/api/products/brands', async (req, res) => {
+  try {
+    const db = await getPool();
+    const [rows] = await db.execute(`
         SELECT DISTINCT brand 
         FROM FE_react_list_product
         ORDER BY brand
       `);
 
-      res.json(rows);
-    } catch (err) {
-      res.status(500).json({ error: 'Database error', details: err.message });
-    }
-  });
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
 
 
-  // Get Families based on Brand
-  app.get('/api/products/families/:brand', async (req, res) => {
-    const { brand } = req.params;
-
-    try {
-      const db = await getPool();
-      const [rows] = await db.execute(`
+// Get Families based on Brand
+app.get('/api/products/families/:brand', async (req, res) => {
+  const { brand } = req.params;
+  try {
+    const db = await getPool();
+    const [rows] = await db.execute(`
         SELECT DISTINCT family 
         FROM FE_react_list_product
         WHERE brand = ?
         ORDER BY family
       `, [brand]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
 
-      res.json(rows);
-    } catch (err) {
-      res.status(500).json({ error: 'Database error', details: err.message });
-    }
-  });
+// Get Models based on Brand and Family
+app.get('/api/products/models/:brand/:family', async (req, res) => {
+  const { brand, family } = req.params;
+  try {
+    const db = await getPool();
+    const [rows] = await db.execute(`
+        SELECT DISTINCT mn 
+        FROM FE_react_list_product
+        WHERE brand = ? AND family = ?
+        ORDER BY mn
+      `, [brand, family]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
 
 
 app.listen(PORT, () => {

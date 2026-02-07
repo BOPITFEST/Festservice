@@ -3,9 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { TicketProvider } from './context/TicketContext';
 import Layout from './components/Layout';
 import LandingPage from './pages/LandingPage';
-import AdminLogin from './pages/AdminLogin';
+import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
-import EngineerLogin from './pages/EngineerLogin';
 import EngineerDashboard from './pages/EngineerDashboard';
 
 function App() {
@@ -16,14 +15,17 @@ function App() {
           <Routes>
             {/* Public / User Route */}
             <Route path="/" element={<LandingPage />} />
-            
+            <Route path="/login" element={<Login />} />
+
             {/* Admin Routes */}
-            <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            
+
             {/* Engineer Routes */}
-            <Route path="/engineer/login" element={<EngineerLogin />} />
             <Route path="/engineer/dashboard" element={<EngineerDashboard />} />
+
+            {/* Redirect legacy login paths to unified login */}
+            <Route path="/admin/login" element={<Login />} />
+            <Route path="/engineer/login" element={<Login />} />
           </Routes>
         </Layout>
       </Router>

@@ -43,8 +43,8 @@ export const TicketProvider = ({ children }) => {
 
   useEffect(() => {
     const init = async () => {
-       await Promise.all([fetchTickets(), fetchEngineers()]);
-       setLoading(false);
+      await Promise.all([fetchTickets(), fetchEngineers()]);
+      setLoading(false);
     };
     init();
   }, []);
@@ -57,9 +57,9 @@ export const TicketProvider = ({ children }) => {
     }
   }, [user]);
 
-  const login = async (trigram, password, role) => {
+  const login = async (trigram, password) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/${role}/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ trigram, password }),
@@ -67,7 +67,7 @@ export const TicketProvider = ({ children }) => {
       const data = await response.json();
       if (data.success) {
         setUser(data.user);
-        return { success: true };
+        return { success: true, user: data.user };
       }
       return { success: false, message: data.message };
     } catch (err) {
@@ -97,7 +97,7 @@ export const TicketProvider = ({ children }) => {
       await fetch(`${API_BASE_URL}/tickets/${ticketId}/assign`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assignedTo: engineerId }),
+        body: JSON.stringify({ assignedTo: engineerId || null }),
       });
       await fetchTickets();
     } catch (err) {
@@ -105,14 +105,26 @@ export const TicketProvider = ({ children }) => {
     }
   };
 
-  const completeTicket = async (ticketId) => {
+  const updateTicket = async (ticketId, { status, remarks, updatedBy }) => {
     try {
-      await fetch(`${API_BASE_URL}/tickets/${ticketId}/complete`, {
+      await fetch(`${API_BASE_URL}/tickets/${ticketId}/update`, {
         method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, remarks, updatedBy }),
       });
       await fetchTickets();
     } catch (err) {
-      console.error('Failed to complete ticket:', err);
+      console.error('Failed to update ticket:', err);
+    }
+  };
+
+  const fetchTicketHistory = async (ticketId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/history`);
+      return await response.json();
+    } catch (err) {
+      console.error('Failed to fetch history:', err);
+      return [];
     }
   };
 
@@ -130,17 +142,17 @@ export const TicketProvider = ({ children }) => {
   };
 
   const acceptInvitation = async (trigram) => {
-      try {
-          await fetch(`${API_BASE_URL}/engineers/accept`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ trigram })
-          });
+    try {
+      await fetch(`${API_BASE_URL}/engineers/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trigram })
+      });
       await fetchEngineers();
       await fetchTickets();
-      } catch (err) {
-          console.error('Failed to accept invitation:', err);
-      }
+    } catch (err) {
+      console.error('Failed to accept invitation:', err);
+    }
   }
 
   const updatePassword = async (trigram, newPassword) => {
@@ -167,12 +179,13 @@ export const TicketProvider = ({ children }) => {
     logout,
     addTicket,
     assignTicket,
-    completeTicket,
+    updateTicket,
     addEngineer,
     acceptInvitation,
     updatePassword, // Added
     fetchTickets,
-    fetchEngineers
+    fetchEngineers,
+    fetchTicketHistory
   };
 
   return <TicketContext.Provider value={value}>{children}</TicketContext.Provider>;
